@@ -26,7 +26,11 @@ class TestComments:
     def test_invalid_comment_rejected(self, stranger_client: Client, make_event, body) -> None:
         event = make_event()
         response = post_comment(stranger_client, event, body)
-        assert response.status_code == 400
+        # Редирект назад на подію (а не сторінка з адресою /comments/), з поясненням помилки.
+        assert response.status_code == 302
+        assert response["Location"] == f"{event.get_absolute_url()}#comments"
+        page = stranger_client.get(event.get_absolute_url()).content.decode()
+        assert "toast-error" in page
         assert not Comment.objects.exists()
 
     def test_anonymous_cannot_comment(self, client: Client, make_event) -> None:

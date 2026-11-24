@@ -113,5 +113,5 @@ class TestProfile:
         assert "Моя подія" in page
         assert "Йду сюди" in page
         assert "Була колись" in page
-        assert "Завершилась" in page
+        assert "Запис закрито" in page
         assert "Чужа подія" not in page

@@ -80,6 +80,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.SecurityHeadersMiddleware",
+    "core.middleware.MethodNotAllowedPageMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -155,6 +156,22 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
     {"NAME": "accounts.validators.MaximumLengthValidator"},
 ]
+
+# ----------------------------------------------------------------------------- email
+# Без EMAIL_HOST листи (скидання пароля) пишуться в лог — зручно локально.
+# У продакшні задайте SMTP-провайдера (Brevo, Resend, Mailgun тощо).
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+if EMAIL_HOST:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_PORT = env_int("EMAIL_PORT", 587)
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", default=True)
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_TIMEOUT = 10
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL") or "Тусовка <no-reply@tusovka.invalid>"
+PASSWORD_RESET_TIMEOUT = 60 * 60  # посилання на скидання пароля діє 1 годину
 
 # ----------------------------------------------------------------------------- i18n
 LANGUAGE_CODE = "uk"

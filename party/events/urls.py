@@ -21,6 +21,11 @@ urlpatterns = [
         views.remove_participant,
         name="remove_participant",
     ),
+    path(
+        "events/<int:pk>/participants/<int:user_id>/restore/",
+        views.restore_participant,
+        name="restore_participant",
+    ),
     path("comments/<int:pk>/delete/", views.delete_comment, name="delete_comment"),
     path("invite/<str:token>/", views.invite, name="invite"),
 ]

@@ -13,7 +13,8 @@
     <div class="badges">
       {% if event.is_private %}<span class="badge badge-glass"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Приватна подія</span>
       {% else %}<span class="badge badge-glass"><svg class="icon" aria-hidden="true"><use href="#i-globe"/></svg>Публічна</span>{% endif %}
-      {% if has_started %}<span class="badge badge-glass">Вже відбулася</span>{% endif %}
+      {% if is_ongoing %}<span class="badge badge-glass"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Уже почалася</span>
+      {% elif has_started %}<span class="badge badge-glass">Минула подія</span>{% endif %}
       {% if is_attending %}<span class="badge badge-ok-solid"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Ви йдете</span>{% endif %}
     </div>
     <h1>{{ event.title }}</h1>
@@ -112,7 +113,7 @@
           <div class="status-pill status-host"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg>Ви організатор цієї події</div>
         {% elif not user.is_authenticated %}
           {% if has_started %}
-            <div class="status-pill status-muted">Подія вже відбулася.</div>
+            <div class="status-pill status-muted">{% if is_ongoing %}Подія вже почалася — запис закрито.{% else %}Подія вже відбулася.{% endif %}</div>
           {% elif free <= 0 %}
             <button type="button" class="btn btn-block btn-lg" disabled>Місць немає</button>
           {% else %}
@@ -127,7 +128,9 @@
             </form>
           {% endif %}
         {% elif has_started %}
-          <div class="status-pill status-muted">Подія вже відбулася.</div>
+          <div class="status-pill status-muted">{% if is_ongoing %}Подія вже почалася — запис закрито.{% else %}Подія вже відбулася.{% endif %}</div>
+        {% elif is_removed %}
+          <div class="status-pill status-muted">Організатор прибрав вас зі списку учасників</div>
         {% elif free > 0 %}
           <form method="post" action="{% url 'events:join' event.pk %}">
             {% csrf_token %}
@@ -184,6 +187,22 @@
           </ul>
         {% else %}
           <p class="muted small">Поки ніхто не записався. Поділіться подією з друзями!</p>
+        {% endif %}
+        {% if removed %}
+          <h3 class="people-subtitle">Прибрані ({{ removed|length }})</h3>
+          <p class="muted small">Не можуть записатися знову, доки ви не дозволите.</p>
+          <ul class="people">
+            {% for item in removed %}
+              <li>
+                <span class="avatar avatar-sm art hue-{{ item.user_id|hue }}" aria-hidden="true">{{ item.user.display_name|initial }}</span>
+                <span class="people-name muted">{{ item.user.display_name }}</span>
+                <form method="post" action="{% url 'events:restore_participant' event.pk item.user_id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-ghost btn-sm">Дозволити</button>
+                </form>
+              </li>
+            {% endfor %}
+          </ul>
         {% endif %}
       </div>
     {% endif %}

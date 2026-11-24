@@ -17,7 +17,7 @@
     </div>
   </div>
   <div class="ev-card-body">
-    <h3 class="ev-card-title"><a class="ev-card-link" href="{{ event.get_absolute_url }}"><span class="visually-hidden">Відкрити подію: </span></a>{{ event.title }}</h3>
+    <h3 class="ev-card-title"><a class="ev-card-link" href="{{ event.get_absolute_url }}">{{ event.title }}</a></h3>
     <p class="ev-meta">
       <span><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><time datetime="{{ event.starts_at|date:'c' }}">{{ event.starts_at|date:"D, j E · H:i" }}</time></span>
       <span><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>{{ event.author.display_name }}</span>
@@ -25,7 +25,7 @@
     <div class="ev-card-foot">
       <div class="seats-line">
         {% if event.is_past %}
-          <span class="seats-past">Завершилась</span>
+          <span class="seats-past">Запис закрито</span>
         {% elif event.free <= 0 %}
           <span class="seats-full">Місць немає</span>
         {% elif event.free <= 3 %}

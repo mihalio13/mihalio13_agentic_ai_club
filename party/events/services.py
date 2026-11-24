@@ -13,7 +13,7 @@ from django.db import IntegrityError, transaction
 from accounts.models import User
 
 from .images import ProcessedImage
-from .models import Attendance, Event, EventCover
+from .models import Attendance, Event, EventCover, RemovedParticipant
 
 
 class EventActionError(Exception):
@@ -40,6 +40,8 @@ def join_event(event_id: int, user: User) -> None:
             raise EventActionError("Подія вже почалася, записатися не можна.")
         if Attendance.objects.filter(event=event, user=user).exists():
             return  # повторне натискання «Іду» — не помилка
+        if RemovedParticipant.objects.filter(event=event, user=user).exists():
+            raise EventActionError("Організатор прибрав вас зі списку учасників цієї події.")
         if Attendance.objects.filter(event=event).count() >= event.capacity:
             raise EventActionError("На жаль, вільних місць уже немає.")
         try:
@@ -62,7 +64,18 @@ def remove_participant(event_id: int, author: User, user_id: int) -> None:
         event = _lock_event(event_id)
         if event.author_id != author.pk:
             raise EventActionError("Лише автор може керувати учасниками.")
-        Attendance.objects.filter(event=event, user_id=user_id).delete()
+        deleted, _ = Attendance.objects.filter(event=event, user_id=user_id).delete()
+        if deleted:
+            # Запам'ятовуємо, інакше прибраний учасник одразу запишеться знову.
+            RemovedParticipant.objects.get_or_create(event=event, user_id=user_id)
+
+
+def restore_participant(event_id: int, author: User, user_id: int) -> None:
+    with transaction.atomic():
+        event = _lock_event(event_id)
+        if event.author_id != author.pk:
+            raise EventActionError("Лише автор може керувати учасниками.")
+        RemovedParticipant.objects.filter(event=event, user_id=user_id).delete()
 
 
 def save_event(

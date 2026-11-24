@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Дію не виконано{% endblock %}
+{% block content %}
+<div class="error-page">
+  <p class="error-code">405</p>
+  <h1>Цю адресу не можна відкрити напряму</h1>
+  <p>Схоже, ви повернулися сюди через історію браузера. Дію треба виконати кнопкою на сторінці.</p>
+  <div class="actions">
+    {% if back_url != "/" %}<a class="btn btn-primary" href="{{ back_url }}"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>Повернутися до події</a>{% endif %}
+    <a class="btn{% if back_url == '/' %} btn-primary{% endif %}" href="{% url 'events:home' %}"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>На головну</a>
+  </div>
+</div>
+{% endblock %}

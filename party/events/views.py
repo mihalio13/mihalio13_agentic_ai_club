@@ -30,7 +30,7 @@ from core.ratelimit import client_ip, rate_limit
 
 from . import access, services
 from .forms import CommentForm, EventForm, SearchForm
-from .models import Attendance, Comment, Event, EventCover, search_key
+from .models import Attendance, Comment, Event, EventCover, RemovedParticipant, search_key
 
 EVENTS_PER_PAGE = 12
 COMMENTS_PER_PAGE = 30
@@ -101,18 +101,23 @@ def home(request: HttpRequest) -> HttpResponse:
     return render(request, "events/home.html", context)
 
 
+def _upcoming_first(events: QuerySet[Event]) -> list[Event]:
+    """Спершу майбутні (найближчі зверху), потім минулі (найсвіжіші зверху)."""
+
+    def key(event: Event) -> tuple[bool, float, int]:
+        past = bool(getattr(event, "is_past", False))
+        ts = event.starts_at.timestamp()
+        return (past, -ts if past else ts, event.pk)
+
+    return sorted(events, key=key)
+
+
 @login_required
 @require_GET
 def profile(request: HttpRequest) -> HttpResponse:
     user = _current_user(request)
-    created = list(
-        _with_seats(Event.objects.filter(author=user), request).order_by("-starts_at", "-pk")
-    )
-    attending = list(
-        _with_seats(Event.objects.filter(attendances__user=user), request).order_by(
-            "starts_at", "pk"
-        )
-    )
+    created = _upcoming_first(_with_seats(Event.objects.filter(author=user), request))
+    attending = _upcoming_first(_with_seats(Event.objects.filter(attendances__user=user), request))
     context = {
         "created": created,
         "attending": attending,
@@ -124,13 +129,15 @@ def profile(request: HttpRequest) -> HttpResponse:
 # ----------------------------------------------------------------------------- detail
 
 
-def _detail_context(
-    request: HttpRequest, event: Event, comment_form: CommentForm | None = None
-) -> dict[str, Any]:
+def _detail_context(request: HttpRequest, event: Event) -> dict[str, Any]:
     taken = Attendance.objects.filter(event=event).count()
     is_author = access.is_author(request, event)
     comments = (
         Comment.objects.filter(event=event).select_related("author").order_by("-created_at", "-pk")
+    )
+    is_removed = (
+        request.user.is_authenticated
+        and RemovedParticipant.objects.filter(event=event, user_id=request.user.pk).exists()
     )
     context: dict[str, Any] = {
         "event": event,
@@ -138,15 +145,22 @@ def _detail_context(
         "free": max(event.capacity - taken, 0),
         "is_author": is_author,
         "is_attending": access.is_attending(request, event),
+        "is_removed": is_removed,
         "has_started": event.has_started(),
+        "is_ongoing": event.is_ongoing(),
         "comments_page": Paginator(comments, COMMENTS_PER_PAGE).get_page(
             request.GET.get("comments")
         ),
-        "comment_form": comment_form or CommentForm(),
+        "comment_form": CommentForm(),
     }
     if is_author:
         context["participants"] = (
             Attendance.objects.filter(event=event).select_related("user").order_by("created_at")
+        )
+        context["removed"] = (
+            RemovedParticipant.objects.filter(event=event)
+            .select_related("user")
+            .order_by("-created_at")
         )
         context["invite_url"] = request.build_absolute_uri(
             reverse("events:invite", args=[event.invite_token])
@@ -260,7 +274,16 @@ def regenerate_invite(request: HttpRequest, pk: int) -> HttpResponse:
 def remove_participant(request: HttpRequest, pk: int, user_id: int) -> HttpResponse:
     event = access.get_owned_event_or_404(request, pk)
     services.remove_participant(event.pk, _current_user(request), user_id)
-    messages.success(request, "Учасника видалено зі списку.")
+    messages.success(request, "Учасника прибрано. Записатися знову він не зможе.")
+    return redirect(f"{event.get_absolute_url()}#participants")
+
+
+@login_required
+@require_POST
+def restore_participant(request: HttpRequest, pk: int, user_id: int) -> HttpResponse:
+    event = access.get_owned_event_or_404(request, pk)
+    services.restore_participant(event.pk, _current_user(request), user_id)
+    messages.success(request, "Користувач знову може записатися на подію.")
     return redirect(f"{event.get_absolute_url()}#participants")
 
 
@@ -310,9 +333,12 @@ def add_comment(request: HttpRequest, pk: int) -> HttpResponse:
         comment.author = _current_user(request)
         comment.save()
         messages.success(request, "Коментар додано.")
-        return redirect(f"{event.get_absolute_url()}#comments")
-    context = _detail_context(request, event, comment_form=form)
-    return render(request, "events/detail.html", context, status=400)
+    else:
+        # Редирект (а не рендер з адресою /comments/), щоб «Оновити» чи «Назад»
+        # не вели на адресу, яку не можна відкрити напряму.
+        error = next(iter(form.errors.get("body", [])), "Коментар не збережено.")
+        messages.error(request, str(error))
+    return redirect(f"{event.get_absolute_url()}#comments")
 
 
 @login_required

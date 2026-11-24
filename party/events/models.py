@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -12,6 +12,7 @@ from django.utils import timezone
 
 MIN_CAPACITY = 1
 MAX_CAPACITY = 10_000
+ONGOING_WINDOW = timedelta(hours=12)
 
 
 def new_invite_token() -> str:
@@ -88,6 +89,11 @@ class Event(models.Model):
     def has_started(self, now: datetime | None = None) -> bool:
         return self.starts_at <= (now or timezone.now())
 
+    def is_ongoing(self, now: datetime | None = None) -> bool:
+        """Почалася нещодавно (часу завершення немає, тому вважаємо «триває» 12 год)."""
+        now = now or timezone.now()
+        return self.starts_at <= now < self.starts_at + ONGOING_WINDOW
+
     def rotate_invite_token(self) -> None:
         self.invite_token = new_invite_token()
 
@@ -130,6 +136,26 @@ class Attendance(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user} → {self.event}"
+
+
+class RemovedParticipant(models.Model):
+    """Учасник, якого організатор прибрав: повторно записатися він не може."""
+
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="removed")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="removed_from"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "прибраний учасник"
+        verbose_name_plural = "прибрані учасники"
+        constraints = [
+            models.UniqueConstraint(fields=["event", "user"], name="removed_unique_per_user")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user} ✕ {self.event}"
 
 
 class Comment(models.Model):

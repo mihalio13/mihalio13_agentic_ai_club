@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from typing import Any
+
 from django.contrib import messages
 from django.contrib.auth import login, logout, update_session_auth_hash
+from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
+from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
@@ -79,6 +83,47 @@ def logout_view(request: HttpRequest) -> HttpResponse:
     logout(request)
     messages.info(request, "Ви вийшли з акаунта.")
     return redirect("events:home")
+
+
+RESET_IP_LIMIT = (10, 60 * 60)  # 10 запитів на скидання / год з одного IP
+RESET_EMAIL_LIMIT = (3, 60 * 60)  # 3 листи / год на одну адресу — щоб не спамити людину
+
+
+@method_decorator(never_cache, name="dispatch")
+class PasswordResetView(auth_views.PasswordResetView):
+    """Запит на скидання пароля.
+
+    Відповідь однакова незалежно від того, чи існує акаунт — перебором не можна
+    дізнатися, хто зареєстрований.
+    """
+
+    template_name = "accounts/password_reset.html"
+    email_template_name = "accounts/emails/password_reset.txt"
+    subject_template_name = "accounts/emails/password_reset_subject.txt"
+    success_url = reverse_lazy("accounts:password_reset_done")
+
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        email = normalize_email_address(str(request.POST.get("email", "")))[:254]
+        ip_ok = hit("reset-ip", client_ip(request), *RESET_IP_LIMIT)
+        email_ok = hit("reset-email", email, *RESET_EMAIL_LIMIT)
+        if not (ip_ok and email_ok):
+            return too_many_requests(request)
+        # Django шукає акаунт без урахування регістру й лише серед активних
+        # користувачів з придатним паролем (демо-акаунти листів не отримують).
+        return super().post(request, *args, **kwargs)
+
+
+class PasswordResetDoneView(auth_views.PasswordResetDoneView):
+    template_name = "accounts/password_reset_done.html"
+
+
+class PasswordResetConfirmView(auth_views.PasswordResetConfirmView):
+    template_name = "accounts/password_reset_confirm.html"
+    success_url = reverse_lazy("accounts:password_reset_complete")
+
+
+class PasswordResetCompleteView(auth_views.PasswordResetCompleteView):
+    template_name = "accounts/password_reset_complete.html"
 
 
 @sensitive_post_parameters("old_password", "new_password1", "new_password2")
