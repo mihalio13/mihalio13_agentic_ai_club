@@ -1,0 +1,90 @@
+name: Tusovka CI
+
+on:
+  push:
+    branches: [main]
+    paths: ["party/**", ".github/workflows/tusovka-ci.yml"]
+  pull_request:
+    paths: ["party/**", ".github/workflows/tusovka-ci.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tusovka-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: party
+
+jobs:
+  quality:
+    name: Lint, types, security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: party/uv.lock
+      - run: uv sync --frozen
+      - name: Ruff
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: Mypy (strict)
+        run: uv run mypy .
+      - name: Bandit
+        run: uv run bandit -q -c pyproject.toml -r .
+      - name: Dependency audit
+        run: uv run pip-audit
+      - name: No missing migrations
+        run: uv run python manage.py makemigrations --check --dry-run --settings=config.settings_test
+      - name: requirements.txt matches uv.lock
+        run: |
+          uv export --frozen --no-dev --no-emit-project --format requirements-txt -o requirements.txt -q
+          git diff --exit-code requirements.txt
+      - name: Django deploy checklist
+        env:
+          DJANGO_DEBUG: "0"
+          DJANGO_SECRET_KEY: ${{ github.run_id }}-ci-only-${{ github.sha }}-not-a-real-secret-key
+          DJANGO_ALLOWED_HOSTS: example.com
+        run: uv run python manage.py check --deploy --fail-level WARNING
+
+  test-sqlite:
+    name: Tests (SQLite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: party/uv.lock
+      - run: uv sync --frozen
+      - run: uv run pytest
+
+  test-postgres:
+    name: Tests (PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: tusovka
+          POSTGRES_PASSWORD: tusovka
+          POSTGRES_DB: tusovka
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U tusovka"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://tusovka:tusovka@localhost:5432/tusovka
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: party/uv.lock
+      - run: uv sync --frozen
+      - run: uv run pytest

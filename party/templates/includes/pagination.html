@@ -1,0 +1,11 @@
+{% if page.has_other_pages %}
+<nav class="pagination" aria-label="Сторінки">
+  {% if page.has_previous %}
+    <a class="btn btn-ghost btn-sm" href="?{% if query %}q={{ query|urlencode }}&amp;{% endif %}{{ param }}={{ page.previous_page_number }}{{ anchor|default:'' }}">← Назад</a>
+  {% endif %}
+  <span class="muted">Сторінка {{ page.number }} з {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}
+    <a class="btn btn-ghost btn-sm" href="?{% if query %}q={{ query|urlencode }}&amp;{% endif %}{{ param }}={{ page.next_page_number }}{{ anchor|default:'' }}">Далі →</a>
+  {% endif %}
+</nav>
+{% endif %}

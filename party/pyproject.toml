@@ -1,0 +1,95 @@
+[project]
+name = "tusovka"
+version = "0.1.0"
+description = "Тусовка — сервіс подій з обмеженою кількістю місць"
+requires-python = ">=3.13"
+dependencies = [
+    "argon2-cffi>=25.1.0",
+    "dj-database-url>=3.1.2",
+    "django>=5.2,<5.3",
+    "django-stubs-ext>=6.1.2",
+    "gunicorn>=27.0.1",
+    "pillow>=13.0.0",
+    "psycopg[binary]>=3.3.9",
+    "whitenoise>=6.12.0",
+]
+
+[dependency-groups]
+dev = [
+    "bandit>=1.9.4",
+    "django-stubs[compatible-mypy]>=6.1.2",
+    "freezegun>=1.5.5",
+    "hypothesis>=6.170.17",
+    "mypy>=2.4.1",
+    "pip-audit>=2.10.1",
+    "pre-commit>=4.7.0",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "pytest-django>=4.14.0",
+    "ruff>=0.17.6",
+]
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings_test"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --cov --cov-report=term-missing:skip-covered"
+filterwarnings = [
+    "error::RuntimeWarning",
+    "ignore:No directory at:UserWarning:django.core.handlers.base",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["accounts", "core", "events", "config"]
+omit = ["*/migrations/*", "config/asgi.py", "config/wsgi.py"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+
+# ---------------------------------------------------------------- ruff
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "B", "UP", "S", "DJ", "C4", "SIM", "RUF", "PT", "PL", "N", "A", "BLE",
+]
+ignore = [
+    "RUF001", "RUF002", "RUF003", # кирилиця у рядках — це нормально для українського UI
+    "PLR2004",                     # magic values у тестах/константах
+    "PLR0913",
+    "RUF012",                      # Django Meta/fields — це конвенція фреймворку
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "PLR2004", "PLC0415"]
+"manage.py" = ["PLC0415"]
+
+# ---------------------------------------------------------------- mypy
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["mypy_django_plugin.main"]
+exclude = ["/migrations/", "^\\.venv/"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+warn_return_any = false
+
+[[tool.mypy.overrides]]
+module = ["dj_database_url.*", "freezegun.*"]
+ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings_test"
+
+# ---------------------------------------------------------------- bandit
+[tool.bandit]
+exclude_dirs = [".venv", "tests"]

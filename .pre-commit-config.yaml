@@ -1,0 +1,41 @@
+# Встановлення (з кореня репозиторію): cd party && uv run pre-commit install
+# Усі хуки працюють у папці party/ і запускаються лише при змінах у ній.
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: bash -c 'cd party && uv run ruff check --fix .'
+        language: system
+        files: ^party/.*\.py$
+        pass_filenames: false
+      - id: ruff-format
+        name: ruff format
+        entry: bash -c 'cd party && uv run ruff format .'
+        language: system
+        files: ^party/.*\.py$
+        pass_filenames: false
+      - id: mypy
+        name: mypy
+        entry: bash -c 'cd party && uv run mypy .'
+        language: system
+        files: ^party/.*\.py$
+        pass_filenames: false
+      - id: bandit
+        name: bandit
+        entry: bash -c 'cd party && uv run bandit -q -c pyproject.toml -r .'
+        language: system
+        files: ^party/.*\.py$
+        pass_filenames: false
+      - id: migrations
+        name: missing migrations
+        entry: bash -c 'cd party && uv run python manage.py makemigrations --check --dry-run --settings=config.settings_test'
+        language: system
+        files: ^party/.*\.py$
+        pass_filenames: false
+      - id: requirements
+        name: requirements.txt in sync with uv.lock
+        entry: bash -c 'cd party && uv export --frozen --no-dev --no-emit-project --format requirements-txt -o requirements.txt -q && git diff --exit-code requirements.txt'
+        language: system
+        files: ^party/(pyproject\.toml|uv\.lock|requirements\.txt)$
+        pass_filenames: false

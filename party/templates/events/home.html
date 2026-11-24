@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{% if query %}Пошук: {{ query }}{% else %}Найближчі події{% endif %}{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Знайди свою тусовку</h1>
+  <p class="lead">Майбутні публічні події з обмеженою кількістю місць. Встигни записатися!</p>
+  <form method="get" action="{% url 'events:home' %}" class="search" role="search">
+    <label for="id_q" class="visually-hidden">Пошук за назвою</label>
+    <input type="search" name="q" id="id_q" value="{{ query }}" maxlength="100" placeholder="Пошук за назвою події…">
+    <button type="submit" class="btn btn-primary">Знайти</button>
+  </form>
+  {% if form.errors.q %}<p class="error">{{ form.errors.q.0 }}</p>{% endif %}
+</section>
+
+<section aria-labelledby="events-heading">
+  <div class="section-head">
+    <h2 id="events-heading">{% if query %}Результати за «{{ query }}»{% else %}Найближчі події{% endif %}</h2>
+    {% if query %}<a href="{% url 'events:home' %}" class="link">Скинути пошук</a>{% endif %}
+  </div>
+
+  {% if page.object_list %}
+    <div class="grid">
+      {% for event in page.object_list %}{% include "events/_card.html" with event=event %}{% endfor %}
+    </div>
+    {% include "includes/pagination.html" with page=page param="page" %}
+  {% else %}
+    <div class="empty">
+      {% if query %}
+        <p class="empty-title">Нічого не знайдено</p>
+        <p>Спробуйте іншу назву або <a href="{% url 'events:home' %}">перегляньте всі події</a>.</p>
+      {% else %}
+        <p class="empty-title">Поки що немає майбутніх подій</p>
+        <p>Станьте першим організатором!</p>
+      {% endif %}
+      {% if user.is_authenticated %}
+        <a class="btn btn-primary" href="{% url 'events:create' %}">Створити подію</a>
+      {% else %}
+        <a class="btn btn-primary" href="{% url 'accounts:register' %}">Зареєструватися</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

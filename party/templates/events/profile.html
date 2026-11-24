@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Мій профіль{% endblock %}
+{% block content %}
+<section class="profile-head">
+  <span class="avatar avatar-lg" aria-hidden="true">{{ user.display_name|first|upper }}</span>
+  <div>
+    <h1>{{ user.display_name }}</h1>
+    <p class="muted">{{ user.email }} · <a class="link" href="{% url 'accounts:password_change' %}">Змінити пароль</a></p>
+  </div>
+</section>
+
+<section aria-labelledby="attending-heading">
+  <h2 id="attending-heading">Я йду ({{ attending|length }})</h2>
+  {% if attending %}
+    <div class="grid">
+      {% for event in attending %}{% include "events/_card.html" with event=event %}{% endfor %}
+    </div>
+  {% else %}
+    <div class="empty empty-sm"><p>Ви ще нікуди не записалися. <a href="{% url 'events:home' %}">Знайти подію</a></p></div>
+  {% endif %}
+</section>
+
+<section aria-labelledby="created-heading">
+  <div class="section-head">
+    <h2 id="created-heading">Мої події ({{ created|length }})</h2>
+    <a class="btn btn-primary btn-sm" href="{% url 'events:create' %}">+ Створити</a>
+  </div>
+  {% if created %}
+    <div class="grid">
+      {% for event in created %}{% include "events/_card.html" with event=event %}{% endfor %}
+    </div>
+  {% else %}
+    <div class="empty empty-sm"><p>Ви ще не створили жодної події.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

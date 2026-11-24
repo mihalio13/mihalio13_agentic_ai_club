@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{% if is_new %}Нова подія{% else %}Редагування{% endif %}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <p>
+    {% if is_new %}<a class="link" href="{% url 'events:home' %}">← Усі події</a>
+    {% else %}<a class="link" href="{{ event.get_absolute_url }}">← До події</a>{% endif %}
+  </p>
+  <h1>{% if is_new %}Нова подія{% else %}Редагування події{% endif %}</h1>
+
+  <form method="post" enctype="multipart/form-data" class="card panel form" novalidate>
+    {% csrf_token %}
+    {% include "includes/form_errors.html" %}
+    {% include "includes/field.html" with field=form.title %}
+    {% include "includes/field.html" with field=form.description %}
+    <div class="form-row">
+      {% include "includes/field.html" with field=form.starts_at %}
+      {% include "includes/field.html" with field=form.capacity %}
+    </div>
+    {% include "includes/field.html" with field=form.visibility %}
+    {% if not is_new and event.has_cover %}
+      <div class="current-cover">
+        <img src="{% url 'events:cover' event.pk %}?v={{ event.cover_version }}" alt="Поточна обкладинка">
+      </div>
+    {% endif %}
+    {% include "includes/field.html" with field=form.cover %}
+    {% if form.remove_cover %}{% include "includes/field.html" with field=form.remove_cover %}{% endif %}
+    <div class="actions">
+      <button type="submit" class="btn btn-primary">{% if is_new %}Створити подію{% else %}Зберегти зміни{% endif %}</button>
+      <a class="btn btn-ghost" href="{% if is_new %}{% url 'events:home' %}{% else %}{{ event.get_absolute_url }}{% endif %}">Скасувати</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

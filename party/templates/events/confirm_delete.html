@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Видалити подію{% endblock %}
+{% block content %}
+<div class="narrow">
+  <div class="card panel">
+    <h1 class="h2">Видалити «{{ event.title }}»?</h1>
+    <p>Подію, усі коментарі та записи учасників буде видалено назавжди.</p>
+    {% if taken %}<p class="alert alert-warning">На цю подію вже записалося {{ taken }} учасників.</p>{% endif %}
+    <form method="post" class="actions">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Так, видалити</button>
+      <a class="btn btn-ghost" href="{{ event.get_absolute_url }}">Скасувати</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

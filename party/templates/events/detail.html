@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }}{% endblock %}
+{% block content %}
+<p><a class="link" href="{% url 'events:home' %}">← Усі події</a></p>
+
+<div class="event-layout">
+  <article class="event-main">
+    <div class="event-cover{% if not event.has_cover %} card-cover-placeholder{% endif %}">
+      {% if event.has_cover %}
+        <img src="{% url 'events:cover' event.pk %}?v={{ event.cover_version }}" alt="Обкладинка події «{{ event.title }}»">
+      {% else %}
+        <span aria-hidden="true">{{ event.title|first|upper }}</span>
+      {% endif %}
+    </div>
+
+    <div class="event-head">
+      <div class="badges">
+        {% if event.is_private %}<span class="badge badge-private">Приватна подія</span>{% endif %}
+        {% if has_started %}<span class="badge badge-muted">Вже відбулася</span>{% endif %}
+      </div>
+      <h1>{{ event.title }}</h1>
+      <p class="event-when">
+        <time datetime="{{ event.starts_at|date:'c' }}">{{ event.starts_at|date:"l, j E Y · H:i" }}</time>
+      </p>
+      <p class="muted">Організатор: <strong>{{ event.author.display_name }}</strong></p>
+    </div>
+
+    {% if event.description %}
+      <div class="prose">{{ event.description|linebreaksbr }}</div>
+    {% else %}
+      <p class="muted">Опису немає.</p>
+    {% endif %}
+  </article>
+
+  <aside class="event-side">
+    <div class="card panel">
+      <p class="seats-big">
+        {% if free > 0 %}Вільно <strong>{{ free }}</strong> з {{ event.capacity }}{% else %}<strong>Місць немає</strong>{% endif %}
+      </p>
+      <progress class="progress" max="{{ event.capacity }}" value="{{ taken }}" aria-label="Зайнято {{ taken }} з {{ event.capacity }} місць">{{ taken }}/{{ event.capacity }}</progress>
+      <p class="muted small">Записалося: {{ taken }}</p>
+
+      {% if is_author %}
+        <p class="status status-ok">Ви організатор цієї події</p>
+        <div class="actions">
+          <a class="btn btn-secondary" href="{% url 'events:edit' event.pk %}">Редагувати</a>
+          <a class="btn btn-danger-ghost" href="{% url 'events:delete' event.pk %}">Видалити</a>
+        </div>
+      {% elif not user.is_authenticated %}
+        {% if has_started %}
+          <p class="status">Подія вже відбулася.</p>
+        {% elif free <= 0 %}
+          <button type="button" class="btn btn-block" disabled>Місць немає</button>
+        {% else %}
+          <a class="btn btn-primary btn-block" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">Увійдіть, щоб записатися</a>
+        {% endif %}
+      {% elif is_attending %}
+        <p class="status status-ok">✓ Ви йдете</p>
+        {% if not has_started %}
+          <form method="post" action="{% url 'events:leave' event.pk %}" data-confirm="Скасувати вашу участь?">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary btn-block">Скасувати</button>
+          </form>
+        {% endif %}
+      {% elif has_started %}
+        <p class="status">Подія вже відбулася.</p>
+      {% elif free > 0 %}
+        <form method="post" action="{% url 'events:join' event.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary btn-block">Іду</button>
+        </form>
+      {% else %}
+        <button type="button" class="btn btn-block" disabled>Місць немає</button>
+      {% endif %}
+    </div>
+
+    {% if is_author %}
+      {% if event.is_private %}
+        <div class="card panel">
+          <h2 class="h3">Посилання-запрошення</h2>
+          <p class="muted small">Подію бачать лише ті, хто має це посилання.</p>
+          <div class="copy-row">
+            <input type="text" readonly value="{{ invite_url }}" id="invite-url" aria-label="Посилання-запрошення">
+            <button type="button" class="btn btn-secondary btn-sm" data-copy="invite-url">Копіювати</button>
+          </div>
+          <form method="post" action="{% url 'events:regenerate_invite' event.pk %}" data-confirm="Старе посилання перестане працювати. Продовжити?">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost btn-sm">Створити нове посилання</button>
+          </form>
+        </div>
+      {% endif %}
+
+      <div class="card panel" id="participants">
+        <h2 class="h3">Учасники ({{ taken }})</h2>
+        {% if participants %}
+          <ul class="people">
+            {% for attendance in participants %}
+              <li>
+                <span class="avatar" aria-hidden="true">{{ attendance.user.display_name|first|upper }}</span>
+                <span class="people-name">{{ attendance.user.display_name }}</span>
+                <form method="post" action="{% url 'events:remove_participant' event.pk attendance.user_id %}" data-confirm="Прибрати {{ attendance.user.display_name }} зі списку учасників?">
+                  {% csrf_token %}
+                  <button type="submit" class="icon-btn" aria-label="Прибрати {{ attendance.user.display_name }}" title="Прибрати">×</button>
+                </form>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted small">Поки ніхто не записався.</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </aside>
+</div>
+
+<section class="comments" id="comments" aria-labelledby="comments-heading">
+  <h2 id="comments-heading">Коментарі ({{ comments_page.paginator.count }})</h2>
+
+  {% if user.is_authenticated %}
+    <form method="post" action="{% url 'events:add_comment' event.pk %}" class="card panel comment-form" novalidate>
+      {% csrf_token %}
+      {% include "includes/form_errors.html" with form=comment_form %}
+      {% include "includes/field.html" with field=comment_form.body %}
+      <button type="submit" class="btn btn-primary">Надіслати</button>
+    </form>
+  {% else %}
+    <p class="muted"><a href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">Увійдіть</a>, щоб залишити коментар.</p>
+  {% endif %}
+
+  {% if comments_page.object_list %}
+    <ul class="comment-list">
+      {% for comment in comments_page.object_list %}
+        <li class="comment">
+          <div class="comment-head">
+            <span class="avatar" aria-hidden="true">{{ comment.author.display_name|first|upper }}</span>
+            <strong>{{ comment.author.display_name }}</strong>
+            {% if comment.author_id == event.author_id %}<span class="badge badge-small">організатор</span>{% endif %}
+            <time class="muted small" datetime="{{ comment.created_at|date:'c' }}">{{ comment.created_at|date:"j E, H:i" }}</time>
+            {% if user.is_authenticated and comment.author_id == user.pk or is_author %}
+              <form method="post" action="{% url 'events:delete_comment' comment.pk %}" class="comment-delete" data-confirm="Видалити коментар?">
+                {% csrf_token %}
+                <button type="submit" class="icon-btn" aria-label="Видалити коментар" title="Видалити">×</button>
+              </form>
+            {% endif %}
+          </div>
+          <p class="comment-body">{{ comment.body|linebreaksbr }}</p>
+        </li>
+      {% endfor %}
+    </ul>
+    {% include "includes/pagination.html" with page=comments_page param="comments" anchor="#comments" %}
+  {% else %}
+    <p class="muted">Коментарів ще немає — будьте першим!</p>
+  {% endif %}
+</section>
+{% endblock %}
