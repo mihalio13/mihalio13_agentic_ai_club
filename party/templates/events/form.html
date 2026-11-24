@@ -1,33 +1,89 @@
 {% extends "base.html" %}
 {% block title %}{% if is_new %}Нова подія{% else %}Редагування{% endif %}{% endblock %}
 {% block content %}
-<div class="narrow">
-  <p>
-    {% if is_new %}<a class="link" href="{% url 'events:home' %}">← Усі події</a>
-    {% else %}<a class="link" href="{{ event.get_absolute_url }}">← До події</a>{% endif %}
-  </p>
-  <h1>{% if is_new %}Нова подія{% else %}Редагування події{% endif %}</h1>
+<div class="container-narrow">
+  {% if is_new %}
+    <a class="back-link" href="{% url 'events:home' %}"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>Усі події</a>
+  {% else %}
+    <a class="back-link" href="{{ event.get_absolute_url }}"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>До події</a>
+  {% endif %}
+  <div class="page-head">
+    <h1>{% if is_new %}Нова подія{% else %}Редагування події{% endif %}</h1>
+    <p>{% if is_new %}Розкажіть, що, коли і для скількох людей. Це займе хвилину.{% else %}Зміни одразу побачать усі учасники.{% endif %}</p>
+  </div>
 
-  <form method="post" enctype="multipart/form-data" class="card panel form" novalidate>
+  <form method="post" enctype="multipart/form-data" class="form" novalidate>
     {% csrf_token %}
     {% include "includes/form_errors.html" %}
-    {% include "includes/field.html" with field=form.title %}
-    {% include "includes/field.html" with field=form.description %}
-    <div class="form-row">
-      {% include "includes/field.html" with field=form.starts_at %}
-      {% include "includes/field.html" with field=form.capacity %}
-    </div>
-    {% include "includes/field.html" with field=form.visibility %}
-    {% if not is_new and event.has_cover %}
-      <div class="current-cover">
-        <img src="{% url 'events:cover' event.pk %}?v={{ event.cover_version }}" alt="Поточна обкладинка">
+
+    <section class="card form-section">
+      <h2 class="form-section-title"><span class="step">1</span>Основне</h2>
+      {% include "includes/field.html" with field=form.title %}
+      {% include "includes/field.html" with field=form.description %}
+    </section>
+
+    <section class="card form-section">
+      <h2 class="form-section-title"><span class="step">2</span>Коли і скільки</h2>
+      <div class="form-row">
+        {% include "includes/field.html" with field=form.starts_at %}
+        {% include "includes/field.html" with field=form.capacity %}
       </div>
-    {% endif %}
-    {% include "includes/field.html" with field=form.cover %}
-    {% if form.remove_cover %}{% include "includes/field.html" with field=form.remove_cover %}{% endif %}
-    <div class="actions">
-      <button type="submit" class="btn btn-primary">{% if is_new %}Створити подію{% else %}Зберегти зміни{% endif %}</button>
+    </section>
+
+    <section class="card form-section">
+      <h2 class="form-section-title"><span class="step">3</span>Хто бачить подію</h2>
+      <div class="field{% if form.visibility.errors %} field-invalid{% endif %}">
+        <fieldset>
+          <legend class="visually-hidden">{{ form.visibility.label }}</legend>
+          <div class="choice-grid">
+            {% for radio in form.visibility %}
+              <label class="choice" for="{{ radio.id_for_label }}">
+                {{ radio.tag }}
+                <span class="choice-icon" aria-hidden="true">
+                  {% if radio.data.value == "private" %}<svg class="icon"><use href="#i-lock"/></svg>{% else %}<svg class="icon"><use href="#i-globe"/></svg>{% endif %}
+                </span>
+                <span>
+                  <strong>{{ radio.choice_label }}</strong>
+                  {% if radio.data.value == "private" %}<small>Лише за посиланням-запрошенням. Не з'являється в пошуку.</small>
+                  {% else %}<small>Видно всім на головній і в пошуку.</small>{% endif %}
+                </span>
+              </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        {% for error in form.visibility.errors %}<p class="error" role="alert"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>{{ error }}</p>{% endfor %}
+      </div>
+    </section>
+
+    <section class="card form-section">
+      <h2 class="form-section-title"><span class="step">4</span>Обкладинка <span class="muted small">— необов'язково</span></h2>
+      {% if not is_new and event.has_cover %}
+        <div class="current-cover">
+          <img src="{% url 'events:cover' event.pk %}?v={{ event.cover_version }}" alt="Поточна обкладинка">
+          <div>
+            <strong>Поточна обкладинка</strong>
+            {% if form.remove_cover %}{% include "includes/field.html" with field=form.remove_cover %}{% endif %}
+          </div>
+        </div>
+      {% endif %}
+      <div class="field{% if form.cover.errors %} field-invalid{% endif %}">
+        <label class="dropzone" data-dropzone>
+          <span class="visually-hidden">{{ form.cover.label }}</span>
+          <input type="file" name="{{ form.cover.html_name }}" id="{{ form.cover.id_for_label }}" accept="image/jpeg,image/png,image/webp">
+          <img class="dropzone-preview" alt="" hidden data-dropzone-preview>
+          <span class="dropzone-label">
+            <span class="dropzone-icon" aria-hidden="true"><svg class="icon icon-lg"><use href="#i-upload"/></svg></span>
+            <span class="dropzone-title" data-dropzone-name>Перетягніть зображення або натисніть</span>
+            <span class="dropzone-hint">JPEG, PNG або WebP, до 5 МБ. Найкраще — 16:9.</span>
+          </span>
+        </label>
+        {% for error in form.cover.errors %}<p class="error" role="alert"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>{{ error }}</p>{% endfor %}
+      </div>
+    </section>
+
+    <div class="form-actions">
       <a class="btn btn-ghost" href="{% if is_new %}{% url 'events:home' %}{% else %}{{ event.get_absolute_url }}{% endif %}">Скасувати</a>
+      <button type="submit" class="btn btn-primary btn-lg">{% if is_new %}<svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg>Створити подію{% else %}<svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Зберегти зміни{% endif %}</button>
     </div>
   </form>
 </div>

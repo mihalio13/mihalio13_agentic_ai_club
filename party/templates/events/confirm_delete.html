@@ -1,15 +1,20 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Видалити подію{% endblock %}
 {% block content %}
-<div class="narrow">
-  <div class="card panel">
-    <h1 class="h2">Видалити «{{ event.title }}»?</h1>
-    <p>Подію, усі коментарі та записи учасників буде видалено назавжди.</p>
-    {% if taken %}<p class="alert alert-warning">На цю подію вже записалося {{ taken }} учасників.</p>{% endif %}
-    <form method="post" class="actions">
+<div class="container-narrow">
+  <a class="back-link" href="{{ event.get_absolute_url }}"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>До події</a>
+  <div class="card card-pad confirm-card">
+    <span class="empty-art art hue-5" aria-hidden="true"><svg class="icon"><use href="#i-trash"/></svg></span>
+    <h1 class="confirm-title">Видалити «{{ event.title }}»?</h1>
+    <p class="muted">Подію, усі коментарі та записи учасників буде видалено назавжди. Цю дію не можна скасувати.</p>
+    {% if taken %}
+      <div class="alert alert-warning"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg><span>На цю подію вже записалося {{ taken }} {{ taken|plural_uk:"учасник,учасники,учасників" }}.</span></div>
+    {% endif %}
+    <form method="post" class="form-actions">
       {% csrf_token %}
-      <button type="submit" class="btn btn-danger">Так, видалити</button>
       <a class="btn btn-ghost" href="{{ event.get_absolute_url }}">Скасувати</a>
+      <button type="submit" class="btn btn-danger"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg>Так, видалити</button>
     </form>
   </div>
 </div>

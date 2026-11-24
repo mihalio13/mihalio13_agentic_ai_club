@@ -1,32 +1,49 @@
-{% load static %}<!doctype html>
+{% load static ui %}<!doctype html>
 <html lang="uk">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f8f5f0" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0e0d12" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="Тусовка — знаходь події поруч і записуйся, поки є місця.">
   <title>{% block title %}Події поруч{% endblock %} · Тусовка</title>
   <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <script src="{% static 'js/app.js' %}" defer></script>
 </head>
 <body>
+  {% include "includes/icons.html" %}
   <a class="skip-link" href="#main">Перейти до вмісту</a>
+
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="{% url 'events:home' %}" aria-label="Тусовка — на головну">
-        <span class="brand-mark" aria-hidden="true"></span>Тусовка
+        <span class="brand-mark" aria-hidden="true"><svg class="icon"><use href="#i-spark"/></svg></span>
+        <span>Тусовка</span>
       </a>
       <nav class="nav" aria-label="Головне меню">
         {% if user.is_authenticated %}
-          <a class="btn btn-primary btn-sm" href="{% url 'events:create' %}">+ Створити подію</a>
-          <a class="nav-link" href="{% url 'events:profile' %}" title="Мій профіль">
-            <span class="avatar" aria-hidden="true">{{ user.display_name|first|upper }}</span>
-            <span class="nav-name">{{ user.display_name }}</span>
+          <a class="btn btn-primary btn-sm" href="{% url 'events:create' %}">
+            <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span class="hide-sm">Створити подію</span><span class="visually-hidden"> (нова подія)</span>
           </a>
-          <form method="post" action="{% url 'accounts:logout' %}" class="inline">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-ghost btn-sm">Вийти</button>
-          </form>
+          <details class="menu" data-menu>
+            <summary aria-label="Меню акаунта">
+              <span class="avatar avatar-sm art hue-{{ user.pk|hue }}" aria-hidden="true">{{ user.display_name|initial }}</span>
+              <span class="hide-sm">{{ user.display_name }}</span>
+              <svg class="icon menu-chevron" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+            </summary>
+            <div class="menu-pop">
+              <div class="menu-head"><strong>{{ user.display_name }}</strong><span>{{ user.email }}</span></div>
+              <a class="menu-item" href="{% url 'events:profile' %}"><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>Мій профіль</a>
+              <a class="menu-item" href="{% url 'events:create' %}"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Створити подію</a>
+              <a class="menu-item" href="{% url 'accounts:password_change' %}"><svg class="icon" aria-hidden="true"><use href="#i-key"/></svg>Змінити пароль</a>
+              <form method="post" action="{% url 'accounts:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="menu-item menu-item-danger"><svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg>Вийти</button>
+              </form>
+            </div>
+          </details>
         {% else %}
           <a class="nav-link" href="{% url 'accounts:login' %}">Увійти</a>
           <a class="btn btn-primary btn-sm" href="{% url 'accounts:register' %}">Реєстрація</a>
@@ -37,9 +54,17 @@
 
   <main id="main" class="container main">
     {% if messages %}
-      <div class="messages">
+      <div class="toasts" aria-live="polite">
         {% for message in messages %}
-          <div class="alert alert-{{ message.tags|default:'info' }}" role="status">{{ message }}</div>
+          <div class="toast toast-{{ message.tags|default:'info' }}" role="status">
+            <span class="toast-icon" aria-hidden="true">
+              {% if message.tags == "success" %}<svg class="icon"><use href="#i-check"/></svg>
+              {% elif message.tags == "error" %}<svg class="icon"><use href="#i-alert"/></svg>
+              {% else %}<svg class="icon"><use href="#i-info"/></svg>{% endif %}
+            </span>
+            <span class="toast-text">{{ message }}</span>
+            <button type="button" class="icon-btn toast-close" data-dismiss aria-label="Закрити повідомлення"><svg class="icon"><use href="#i-x"/></svg></button>
+          </div>
         {% endfor %}
       </div>
     {% endif %}
@@ -47,7 +72,10 @@
   </main>
 
   <footer class="site-footer">
-    <div class="container">Тусовка · {% now "Y" %} · Увесь час указано за Києвом</div>
+    <div class="container footer-inner">
+      <span class="footer-brand"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg>Тусовка · {% now "Y" %}</span>
+      <span>Увесь час указано за Києвом</span>
+    </div>
   </footer>
 </body>
 </html>

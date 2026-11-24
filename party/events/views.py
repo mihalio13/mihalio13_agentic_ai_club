@@ -9,9 +9,11 @@ from django.core.paginator import Paginator
 from django.db.models import (
     BooleanField,
     Count,
+    Exists,
     ExpressionWrapper,
     F,
     IntegerField,
+    OuterRef,
     Q,
     QuerySet,
     Value,
@@ -41,14 +43,22 @@ def _current_user(request: HttpRequest) -> User:
     return user
 
 
-def _with_seats(qs: QuerySet[Event]) -> QuerySet[Event]:
+def _with_seats(qs: QuerySet[Event], request: HttpRequest) -> QuerySet[Event]:
+    """Додає до подій лічильники місць, ознаку «минула» і «я йду» — одним SQL-запитом."""
     taken = Count("attendances", distinct=True)
+    if request.user.is_authenticated:
+        attending: Exists | Value = Exists(
+            Attendance.objects.filter(event=OuterRef("pk"), user_id=request.user.pk)
+        )
+    else:
+        attending = Value(False)
     return qs.select_related("author").annotate(
         taken=taken,
         free=Greatest(
             ExpressionWrapper(F("capacity") - taken, output_field=IntegerField()), Value(0)
         ),
         is_past=ExpressionWrapper(Q(starts_at__lte=timezone.now()), output_field=BooleanField()),
+        is_attending=ExpressionWrapper(attending, output_field=BooleanField()),
     )
 
 
@@ -65,29 +75,50 @@ def home(request: HttpRequest) -> HttpResponse:
     query = ""
     if form.is_valid():
         query = form.cleaned_data["q"]
-    events = _with_seats(
-        Event.objects.filter(visibility=Event.Visibility.PUBLIC, starts_at__gt=timezone.now())
-    ).order_by("starts_at", "pk")
+    upcoming = Event.objects.filter(
+        visibility=Event.Visibility.PUBLIC, starts_at__gt=timezone.now()
+    )
+    events = _with_seats(upcoming, request).order_by("starts_at", "pk")
     if query:
         events = events.filter(title_search__contains=search_key(query))
     page = Paginator(events, EVENTS_PER_PAGE).get_page(request.GET.get("page"))
-    return render(request, "events/home.html", {"form": form, "query": query, "page": page})
+    featured = None
+    if not query and page.number == 1:
+        featured = (
+            # `free` — анотація з _with_seats; плагін mypy не бачить її через межу функції.
+            _with_seats(upcoming, request)
+            .filter(free__gt=0)  # type: ignore[misc]
+            .order_by("starts_at", "pk")
+            .first()
+        )
+    context = {
+        "form": form,
+        "query": query,
+        "page": page,
+        "featured": featured,
+        "total_upcoming": upcoming.count(),
+    }
+    return render(request, "events/home.html", context)
 
 
 @login_required
 @require_GET
 def profile(request: HttpRequest) -> HttpResponse:
     user = _current_user(request)
-    now = timezone.now()
-    created = _with_seats(Event.objects.filter(author=user)).order_by("-starts_at", "-pk")
-    attending = _with_seats(Event.objects.filter(attendances__user=user)).order_by(
-        "starts_at", "pk"
+    created = list(
+        _with_seats(Event.objects.filter(author=user), request).order_by("-starts_at", "-pk")
     )
-    return render(
-        request,
-        "events/profile.html",
-        {"created": created, "attending": attending, "now": now},
+    attending = list(
+        _with_seats(Event.objects.filter(attendances__user=user), request).order_by(
+            "starts_at", "pk"
+        )
     )
+    context = {
+        "created": created,
+        "attending": attending,
+        "upcoming_count": sum(1 for e in attending if not getattr(e, "is_past", False)),
+    }
+    return render(request, "events/profile.html", context)
 
 
 # ----------------------------------------------------------------------------- detail

@@ -1,5 +1,6 @@
 {% if form.non_field_errors %}
   <div class="alert alert-error" role="alert">
-    {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+    <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+    <div>{% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}</div>
   </div>
 {% endif %}

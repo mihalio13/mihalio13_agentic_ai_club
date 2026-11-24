@@ -1,21 +1,35 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}{% if query %}Пошук: {{ query }}{% else %}Найближчі події{% endif %}{% endblock %}
 {% block content %}
-<section class="hero">
-  <h1>Знайди свою тусовку</h1>
-  <p class="lead">Майбутні публічні події з обмеженою кількістю місць. Встигни записатися!</p>
+<section class="hero{% if featured %} hero-split{% endif %}" aria-labelledby="hero-title">
+ <div class="hero-text">
+  <span class="hero-kicker"><span class="hero-kicker-dot" aria-hidden="true"></span>{{ total_upcoming }} {{ total_upcoming|plural_uk:"подія попереду,події попереду,подій попереду" }}</span>
+  <h1 id="hero-title">Знайди свою <span class="accent">тусовку</span></h1>
+  <p class="hero-lead">Настолки, пробіжки, лекції й вечірки поруч. Обирай подію і записуйся, поки є вільні місця.</p>
   <form method="get" action="{% url 'events:home' %}" class="search" role="search">
+    <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
     <label for="id_q" class="visually-hidden">Пошук за назвою</label>
-    <input type="search" name="q" id="id_q" value="{{ query }}" maxlength="100" placeholder="Пошук за назвою події…">
+    <input type="search" name="q" id="id_q" value="{{ query }}" maxlength="100" placeholder="Пошук за назвою події…" autocomplete="off">
     <button type="submit" class="btn btn-primary">Знайти</button>
   </form>
-  {% if form.errors.q %}<p class="error">{{ form.errors.q.0 }}</p>{% endif %}
+  {% if form.errors.q %}<p class="error"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>{{ form.errors.q.0 }}</p>{% endif %}
+ </div>
+ {% if featured %}
+  <aside class="hero-feature" aria-label="Найближча подія">
+    <span class="hero-feature-label"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Найближча подія з вільними місцями</span>
+    {% include "events/_card.html" with event=featured %}
+  </aside>
+ {% endif %}
 </section>
 
-<section aria-labelledby="events-heading">
+<section class="section" aria-labelledby="events-heading">
   <div class="section-head">
-    <h2 id="events-heading">{% if query %}Результати за «{{ query }}»{% else %}Найближчі події{% endif %}</h2>
-    {% if query %}<a href="{% url 'events:home' %}" class="link">Скинути пошук</a>{% endif %}
+    <div>
+      <h2 id="events-heading">{% if query %}Результати за «{{ query }}»{% else %}Найближчі події{% endif %}<span class="count-pill">{{ page.paginator.count }}</span></h2>
+      <p class="section-sub">{% if query %}Шукаємо серед майбутніх публічних подій{% else %}Відсортовано за датою — найближчі спочатку{% endif %}</p>
+    </div>
+    {% if query %}<a href="{% url 'events:home' %}" class="btn btn-ghost btn-sm"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg>Скинути пошук</a>{% endif %}
   </div>
 
   {% if page.object_list %}
@@ -26,16 +40,19 @@
   {% else %}
     <div class="empty">
       {% if query %}
+        <span class="empty-art art hue-2" aria-hidden="true"><svg class="icon"><use href="#i-search"/></svg></span>
         <p class="empty-title">Нічого не знайдено</p>
-        <p>Спробуйте іншу назву або <a href="{% url 'events:home' %}">перегляньте всі події</a>.</p>
+        <p>За запитом «{{ query }}» подій немає. Спробуйте іншу назву або перегляньте всі події.</p>
+        <a class="btn" href="{% url 'events:home' %}">Усі події</a>
       {% else %}
+        <span class="empty-art art hue-0" aria-hidden="true"><svg class="icon"><use href="#i-spark"/></svg></span>
         <p class="empty-title">Поки що немає майбутніх подій</p>
-        <p>Станьте першим організатором!</p>
-      {% endif %}
-      {% if user.is_authenticated %}
-        <a class="btn btn-primary" href="{% url 'events:create' %}">Створити подію</a>
-      {% else %}
-        <a class="btn btn-primary" href="{% url 'accounts:register' %}">Зареєструватися</a>
+        <p>Станьте першим організатором: створіть подію, і її побачать усі.</p>
+        {% if user.is_authenticated %}
+          <a class="btn btn-primary" href="{% url 'events:create' %}"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Створити подію</a>
+        {% else %}
+          <a class="btn btn-primary" href="{% url 'accounts:register' %}">Зареєструватися</a>
+        {% endif %}
       {% endif %}
     </div>
   {% endif %}

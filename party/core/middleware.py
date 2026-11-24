@@ -11,7 +11,8 @@ from django.template.loader import render_to_string
 CONTENT_SECURITY_POLICY = "; ".join(
     [
         "default-src 'self'",
-        "img-src 'self' data:",
+        # blob: — лише для локального прев'ю обкладинки перед завантаженням.
+        "img-src 'self' data: blob:",
         "style-src 'self'",
         "script-src 'self'",
         "font-src 'self'",

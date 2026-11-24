@@ -1,26 +1,41 @@
-<article class="card event-card{% if event.is_past %} event-card-past{% endif %}">
-  <a class="card-link" href="{{ event.get_absolute_url }}">
-    <div class="card-cover{% if not event.has_cover %} card-cover-placeholder{% endif %}">
-      {% if event.has_cover %}
-        <img src="{% url 'events:cover' event.pk %}?v={{ event.cover_version }}" alt="" loading="lazy" width="640" height="360">
-      {% else %}
-        <span aria-hidden="true">{{ event.title|first|upper }}</span>
-      {% endif %}
-      {% if event.is_private %}<span class="badge badge-private">Приватна</span>{% endif %}
+{% load ui %}<article class="ev-card{% if event.is_past %} ev-card-past{% endif %}">
+  <div class="ev-card-media art hue-{{ event.pk|hue }}">
+    {% if event.has_cover %}
+      <img src="{% url 'events:cover' event.pk %}?v={{ event.cover_version }}" alt="" loading="lazy" decoding="async" width="640" height="360">
+    {% else %}
+      <span class="art-glyph" aria-hidden="true"><svg class="icon"><use href="#i-spark"/></svg></span>
+    {% endif %}
+    <div class="ev-card-top">
+      <time class="chip-date" datetime="{{ event.starts_at|date:'c' }}" aria-hidden="true">
+        <span class="chip-date-day">{{ event.starts_at|date:"j" }}</span>
+        <span class="chip-date-mon">{{ event.starts_at|date:"b" }}</span>
+      </time>
+      <div class="ev-card-badges">
+        {% if event.is_private %}<span class="badge badge-glass"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>Приватна</span>{% endif %}
+        {% if event.is_attending %}<span class="badge badge-ok-solid"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Ви йдете</span>{% endif %}
+      </div>
     </div>
-    <div class="card-body">
-      <p class="card-date"><time datetime="{{ event.starts_at|date:'c' }}">{{ event.starts_at|date:"D, j E Y · H:i" }}</time></p>
-      <h3 class="card-title">{{ event.title }}</h3>
-      <p class="card-meta">
+  </div>
+  <div class="ev-card-body">
+    <h3 class="ev-card-title"><a class="ev-card-link" href="{{ event.get_absolute_url }}"><span class="visually-hidden">Відкрити подію: </span></a>{{ event.title }}</h3>
+    <p class="ev-meta">
+      <span><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><time datetime="{{ event.starts_at|date:'c' }}">{{ event.starts_at|date:"D, j E · H:i" }}</time></span>
+      <span><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>{{ event.author.display_name }}</span>
+    </p>
+    <div class="ev-card-foot">
+      <div class="seats-line">
         {% if event.is_past %}
-          <span class="seats seats-past">Завершилась</span>
-        {% elif event.free > 0 %}
-          <span class="seats">Вільно {{ event.free }} з {{ event.capacity }}</span>
+          <span class="seats-past">Завершилась</span>
+        {% elif event.free <= 0 %}
+          <span class="seats-full">Місць немає</span>
+        {% elif event.free <= 3 %}
+          <span class="seats-low">Вільно {{ event.free }} з {{ event.capacity }}</span>
         {% else %}
-          <span class="seats seats-full">Місць немає</span>
+          <span class="seats-ok">Вільно {{ event.free }} з {{ event.capacity }}</span>
         {% endif %}
-        <span class="muted">· {{ event.author.display_name }}</span>
-      </p>
+        <span class="muted small">{{ event.taken }} {{ event.taken|plural_uk:"учасник,учасники,учасників" }}</span>
+      </div>
+      <progress class="meter{% if event.free <= 0 %} meter-full{% endif %}" max="{{ event.capacity }}" value="{{ event.taken }}" aria-label="Зайнято {{ event.taken }} з {{ event.capacity }} місць"></progress>
     </div>
-  </a>
+  </div>
 </article>

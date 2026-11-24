@@ -1,11 +1,11 @@
 {% if page.has_other_pages %}
 <nav class="pagination" aria-label="Сторінки">
   {% if page.has_previous %}
-    <a class="btn btn-ghost btn-sm" href="?{% if query %}q={{ query|urlencode }}&amp;{% endif %}{{ param }}={{ page.previous_page_number }}{{ anchor|default:'' }}">← Назад</a>
+    <a class="btn btn-sm" href="?{% if query %}q={{ query|urlencode }}&amp;{% endif %}{{ param }}={{ page.previous_page_number }}{{ anchor|default:'' }}"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>Назад</a>
   {% endif %}
-  <span class="muted">Сторінка {{ page.number }} з {{ page.paginator.num_pages }}</span>
+  <span class="pagination-info">Сторінка {{ page.number }} з {{ page.paginator.num_pages }}</span>
   {% if page.has_next %}
-    <a class="btn btn-ghost btn-sm" href="?{% if query %}q={{ query|urlencode }}&amp;{% endif %}{{ param }}={{ page.next_page_number }}{{ anchor|default:'' }}">Далі →</a>
+    <a class="btn btn-sm" href="?{% if query %}q={{ query|urlencode }}&amp;{% endif %}{{ param }}={{ page.next_page_number }}{{ anchor|default:'' }}">Далі<svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
   {% endif %}
 </nav>
 {% endif %}

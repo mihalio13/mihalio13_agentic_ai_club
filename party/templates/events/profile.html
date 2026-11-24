@@ -1,36 +1,62 @@
 {% extends "base.html" %}
+{% load ui %}
 {% block title %}Мій профіль{% endblock %}
 {% block content %}
-<section class="profile-head">
-  <span class="avatar avatar-lg" aria-hidden="true">{{ user.display_name|first|upper }}</span>
-  <div>
-    <h1>{{ user.display_name }}</h1>
-    <p class="muted">{{ user.email }} · <a class="link" href="{% url 'accounts:password_change' %}">Змінити пароль</a></p>
+<section class="card profile-hero" aria-labelledby="profile-name">
+  <span class="avatar avatar-xl art hue-{{ user.pk|hue }}" aria-hidden="true">{{ user.display_name|initial }}</span>
+  <div class="profile-info">
+    <h1 id="profile-name">{{ user.display_name }}</h1>
+    <p>{{ user.email }}</p>
+    <div class="stats">
+      <span class="stat"><svg class="icon" aria-hidden="true"><use href="#i-ticket"/></svg><strong>{{ upcoming_count }}</strong> {{ upcoming_count|plural_uk:"майбутня подія,майбутні події,майбутніх подій" }}</span>
+      <span class="stat"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg><strong>{{ created|length }}</strong> {{ created|length|plural_uk:"створена,створені,створених" }}</span>
+    </div>
+  </div>
+  <div class="actions">
+    <a class="btn btn-sm" href="{% url 'accounts:password_change' %}"><svg class="icon" aria-hidden="true"><use href="#i-key"/></svg>Змінити пароль</a>
+    <a class="btn btn-primary btn-sm" href="{% url 'events:create' %}"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Створити подію</a>
   </div>
 </section>
 
-<section aria-labelledby="attending-heading">
-  <h2 id="attending-heading">Я йду ({{ attending|length }})</h2>
+<section class="section" aria-labelledby="attending-heading">
+  <div class="section-head">
+    <div>
+      <h2 id="attending-heading">Я йду<span class="count-pill">{{ attending|length }}</span></h2>
+      <p class="section-sub">Події, на які ви записалися</p>
+    </div>
+  </div>
   {% if attending %}
     <div class="grid">
       {% for event in attending %}{% include "events/_card.html" with event=event %}{% endfor %}
     </div>
   {% else %}
-    <div class="empty empty-sm"><p>Ви ще нікуди не записалися. <a href="{% url 'events:home' %}">Знайти подію</a></p></div>
+    <div class="empty empty-sm">
+      <span class="empty-art art hue-6" aria-hidden="true"><svg class="icon"><use href="#i-ticket"/></svg></span>
+      <p class="empty-title">Ви ще нікуди не записалися</p>
+      <p>Знайдіть подію до душі на головній сторінці.</p>
+      <a class="btn" href="{% url 'events:home' %}"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Знайти подію</a>
+    </div>
   {% endif %}
 </section>
 
-<section aria-labelledby="created-heading">
+<section class="section" aria-labelledby="created-heading">
   <div class="section-head">
-    <h2 id="created-heading">Мої події ({{ created|length }})</h2>
-    <a class="btn btn-primary btn-sm" href="{% url 'events:create' %}">+ Створити</a>
+    <div>
+      <h2 id="created-heading">Мої події<span class="count-pill">{{ created|length }}</span></h2>
+      <p class="section-sub">Події, які ви організовуєте, включно з минулими</p>
+    </div>
   </div>
   {% if created %}
     <div class="grid">
       {% for event in created %}{% include "events/_card.html" with event=event %}{% endfor %}
     </div>
   {% else %}
-    <div class="empty empty-sm"><p>Ви ще не створили жодної події.</p></div>
+    <div class="empty empty-sm">
+      <span class="empty-art art hue-0" aria-hidden="true"><svg class="icon"><use href="#i-spark"/></svg></span>
+      <p class="empty-title">Ви ще не створили жодної події</p>
+      <p>Зберіть друзів на настолки, пробіжку чи лекцію.</p>
+      <a class="btn btn-primary" href="{% url 'events:create' %}"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Створити подію</a>
+    </div>
   {% endif %}
 </section>
 {% endblock %}

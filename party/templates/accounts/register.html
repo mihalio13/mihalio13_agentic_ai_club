@@ -2,18 +2,26 @@
 {% block title %}Реєстрація{% endblock %}
 {% block content %}
 <div class="auth">
-  <h1>Реєстрація</h1>
-  <form method="post" class="card panel form" novalidate>
-    {% csrf_token %}
-    <input type="hidden" name="next" value="{{ next }}">
-    {% include "includes/form_errors.html" %}
-    {% include "includes/field.html" with field=form.email %}
-    {% include "includes/field.html" with field=form.display_name %}
-    {% include "includes/field.html" with field=form.password1 %}
-    {% include "includes/field.html" with field=form.password2 %}
-    <p class="muted small">Ваш email бачите лише ви. Іншим показуємо тільки ім'я.</p>
-    <button type="submit" class="btn btn-primary btn-block">Створити акаунт</button>
-  </form>
-  <p class="muted center">Вже є акаунт? <a href="{% url 'accounts:login' %}?next={{ next|urlencode }}">Увійти</a></p>
+  <div class="card auth-card">
+    <div class="auth-head">
+      <span class="brand-mark" aria-hidden="true"><svg class="icon"><use href="#i-spark"/></svg></span>
+      <h1>Створіть акаунт</h1>
+      <p>Хвилина — і можна збирати свою тусовку</p>
+    </div>
+    <form method="post" class="form" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      {% include "includes/form_errors.html" %}
+      <div>
+        {% include "includes/field.html" with field=form.email %}
+        {% include "includes/field.html" with field=form.display_name %}
+        {% include "includes/field.html" with field=form.password1 %}
+        {% include "includes/field.html" with field=form.password2 %}
+      </div>
+      <p class="note"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><span>Ваш email бачите лише ви. Іншим показуємо тільки ім'я.</span></p>
+      <button type="submit" class="btn btn-primary btn-block btn-lg">Створити акаунт</button>
+    </form>
+  </div>
+  <p class="auth-foot">Вже є акаунт? <a href="{% url 'accounts:login' %}?next={{ next|urlencode }}">Увійти</a></p>
 </div>
 {% endblock %}

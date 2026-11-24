@@ -1,19 +1,17 @@
 <div class="field{% if field.errors %} field-invalid{% endif %}{% if field.field.widget.input_type == 'checkbox' %} field-checkbox{% endif %}">
   {% if field.field.widget.input_type == 'checkbox' %}
     <label for="{{ field.id_for_label }}">{{ field }} {{ field.label }}</label>
-  {% elif field.field.widget.input_type == 'radio' %}
-    <fieldset>
-      <legend>{{ field.label }}</legend>
-      <div class="radio-group">
-        {% for radio in field %}
-          <label class="radio-card" for="{{ radio.id_for_label }}">{{ radio.tag }} <span>{{ radio.choice_label }}</span></label>
-        {% endfor %}
-      </div>
-    </fieldset>
   {% else %}
     <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>
-    {{ field }}
+    {% if field.field.widget.input_type == 'password' %}
+      <div class="password-wrap">
+        {{ field }}
+        <button type="button" class="icon-btn password-toggle" data-toggle-password="{{ field.id_for_label }}" aria-label="Показати пароль" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-eye"/></svg></button>
+      </div>
+    {% else %}
+      {{ field }}
+    {% endif %}
   {% endif %}
   {% if field.help_text %}<p class="help">{{ field.help_text }}</p>{% endif %}
-  {% for error in field.errors %}<p class="error" role="alert">{{ error }}</p>{% endfor %}
+  {% for error in field.errors %}<p class="error" role="alert"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>{{ error }}</p>{% endfor %}
 </div>

@@ -3,12 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>{% block title %}Помилка{% endblock %} · Тусовка</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
 <body>
   <main class="container main">
-    <div class="empty error-page">
+    <div class="error-page">
       <p class="error-code">{% block code %}{% endblock %}</p>
       <h1>{% block heading %}{% endblock %}</h1>
       <p>{% block text %}{% endblock %}</p>
