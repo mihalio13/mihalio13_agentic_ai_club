@@ -4,7 +4,7 @@
 {% block content %}
 <a class="back-link" href="{% url 'events:home' %}"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>Усі події</a>
 
-<header class="event-hero art hue-{{ event.pk|hue }}">
+<header class="event-hero art hue-{{ event.pk|hue }}{% if event.has_cover %} event-hero-cover{% endif %}">
   {% if event.has_cover %}
     <img src="{% url 'events:cover' event.pk %}?v={{ event.cover_version }}" alt="Обкладинка події «{{ event.title }}»">
   {% endif %}
